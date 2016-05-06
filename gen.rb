@@ -16,34 +16,40 @@ require 'yaml'
 
 # print_ans(eval_logic(arg1), eval_logic(arg2), eval_logic(arg3))
 
+all_jobs = []
+
 # - xor: [in2y, in2x]
-# def eval_or(gate)
+def eval_xor(gate)
 
-#   res_name = 'xor-out-' + rand_id
+  arg0 = gate[:xor][0]
+  arg1 = gate[:xor][1]
 
-#   arg0 = gate['xor'][0]
-#   arg1 = gate['xor'][1]
+  arg0_name = eval_set(arg0)
+  arg1_name = eval_set(arg1)
 
-#   build = {
-#     name: 'xor1' + rand_id,
-#     plan: [
-#       {
-#         aggregate: [],
-#       },
-#       {
-#         task: 'xor',
-#      file: 'animated-computing-machine/gates/xor.yml',
+  name = ['xor_', arg0_name, arg1_name].join
+  res_name = name + '_res_out'
 
-#       {
-#         put: out,
-#         resource: res_name,
-#         params: {file: 'out/bit'},
-#       }
-#     ]
+  build = {
+    name: name,
+    plan: [
+      {
+        aggregate: [],
+      },
+      {
+        task: 'xor',
+        file: 'animated-computing-machine/gates/xor.yml',
+      },
+      {
+        put: 'out',
+        resource: res_name,
+        params: {file: 'out/bit'},
+      }
+    ]
+  }
 
-
-#   Job.new res_name, build
-# end
+  res_name
+end
 
 # def rand_id
 
@@ -62,26 +68,35 @@ Job = Struct.new :output_resource_name, :definition
 
 def eval_set(set_def)
 
-  build = { }
-  #   name: 'xor1' + rand_id,
-  #   plan: [
-  #     {
-  #       aggregate: [],
-  #     },
-  #     {
-  #       task: 'xor',
-  #    file: 'animated-computing-machine/gates/xor.yml',
-
-  #     {
-  #       put: out,
-  #       resource: res_name,
-  #       params: {file: 'out/bit'},
-  #     }
-  #   ]
+  arg0 = gate[:xor][0]
+  arg1 = gate[:xor][1]
 
   res_name = 'in_' + set_def[:in]
 
-  Job.new res_name, build
+  build = {
+    name: 'xor1' + rand_id,
+    plan: [
+      {
+        aggregate: [],
+      },
+      {
+        task: 'xor',
+        file: 'animated-computing-machine/gates/xor.yml',
+      },
+      {
+        put: 'out',
+        resource: res_name,
+        params: {file: 'out/bit'},
+      }
+    ]
+  }
+
+  #Job.new res_name, build
+  res_name
 end
 
-eval_set({in: '1x', val: '0'})
+puts eval_set({in: '1x', val: '0'})
+puts eval_xor({xor: [{in: '1x', val: '0'}, {in: '1y', val: '0'}]})
+puts all_jobs.inspect
+
+
