@@ -12,10 +12,14 @@ inputs:
 outputs:
 - name: out1
 - name: out2
+- name: out3
+- name: out4
 
 params:
   out1:
   out2:
+  out3:
+  out4:
 
 
 run:

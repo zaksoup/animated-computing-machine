@@ -24,6 +24,24 @@ resources:
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
 
+- name: in3x
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: in3x/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: in4x
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: in4x/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
 - name: in1y
   type: s3
   source:
@@ -38,6 +56,24 @@ resources:
   source:
     bucket: animated-computing-machine
     versioned_file: in2y/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: in3y
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: in3y/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: in4y
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: in4y/bit
     access_key_id: {{access-key-id}}
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
@@ -60,6 +96,23 @@ resources:
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
 
+- name: out3
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: out3/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: out4
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: out4/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
 
 - name: c1
   type: s3
@@ -79,6 +132,24 @@ resources:
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
 
+- name: c3
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: c3/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: c4
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: c4/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
 jobs:
 - name: setx
   plan:
@@ -88,6 +159,8 @@ jobs:
     params:
       out1: 1
       out2: 0
+      out3: 1
+      out4: 0
   - aggregate:
     - put: in1
       resource: in1x
@@ -97,6 +170,14 @@ jobs:
       resource: in2x
       params:
         file: out2/bit
+    - put: in3
+      resource: in3x
+      params:
+        file: out3/bit
+    - put: in4
+      resource: in4x
+      params:
+        file: out4/bit
 
 - name: sety
   plan:
@@ -106,6 +187,8 @@ jobs:
     params:
       out1: 1
       out2: 0
+      out3: 1
+      out4: 0
   - aggregate:
     - put: in1
       resource: in1y
@@ -115,6 +198,14 @@ jobs:
       resource: in2y
       params:
         file: out2/bit
+    - put: in3
+      resource: in3y
+      params:
+        file: out3/bit
+    - put: in4
+      resource: in4y
+      params:
+        file: out4/bit
 
 #add bit 1
 
@@ -253,20 +344,121 @@ jobs:
     params:
       file: out/bit
 
+#add bit 3
+
+- name: xor3a
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: in3x
+      passed: [setx]
+    - get: in2
+      trigger: true
+      resource: in3y
+      passed: [sety]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: out3
+    params:
+      file: out/bit
+
+- name: xor3b
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: out3
+      passed: [xor3a]
+    - get: in2
+      trigger: true
+      resource: c2
+      passed: [or2]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: out3
+    params:
+      file: out/bit
+
+- name: and3a
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: in3x
+      passed: [setx]
+    - get: in2
+      trigger: true
+      resource: in3y
+      passed: [sety]
+    - get: animated-computing-machine
+  - task: and
+    file: animated-computing-machine/gates/and.yml
+  - put: out
+    resource: c3
+    params:
+      file: out/bit
+
+- name: and3b
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: out3
+      passed: [xor3a]
+    - get: in2
+      trigger: true
+      resource: c2
+      passed: [or2]
+    - get: animated-computing-machine
+  - task: and
+    file: animated-computing-machine/gates/and.yml
+  - put: out
+    resource: c3
+    params:
+      file: out/bit
+
+- name: or3
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: c3
+      passed: [and3a]
+    - get: in2
+      trigger: true
+      resource: c3
+      passed: [and3b]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: c3
+    params:
+      file: out/bit
+
 # final print
 
 - name: print
   plan:
   - aggregate:
     - get: in1
-      resource: c2
+      resource: c3
       trigger: true
-      passed: [or2]
+      passed: [or3]
     - get: in2
+      resource: out3
+      trigger: true
+      passed: [xor3b]
+    - get: in3
       resource: out2
       trigger: true
       passed: [xor2b]
-    - get: in3
+    - get: in4
       resource: out1
       trigger: true
       passed: [xor1]
@@ -281,10 +473,11 @@ jobs:
       - name: in1
       - name: in2
       - name: in3
+      - name: in4
       run:
         path: sh
         args:
         - -exc
         - |
-          echo "$(cat in1/bit)$(cat in2/bit)$(cat in3/bit)"
+          echo "$(cat in1/bit)$(cat in2/bit)$(cat in3/bit)$(cat in4/bit)"
 
