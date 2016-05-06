@@ -159,7 +159,7 @@ jobs:
     params:
       out1: 1
       out2: 0
-      out3: 1
+      out3: 0
       out4: 0
   - aggregate:
     - put: in1
@@ -186,9 +186,9 @@ jobs:
     file: animated-computing-machine/set.yml
     params:
       out1: 1
-      out2: 0
+      out2: 1
       out3: 1
-      out4: 0
+      out4: 1
   - aggregate:
     - put: in1
       resource: in1y
@@ -441,24 +441,125 @@ jobs:
     params:
       file: out/bit
 
+#add bit 3
+
+- name: xor4a
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: in4x
+      passed: [setx]
+    - get: in2
+      trigger: true
+      resource: in4y
+      passed: [sety]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: out4
+    params:
+      file: out/bit
+
+- name: xor4b
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: out4
+      passed: [xor4a]
+    - get: in2
+      trigger: true
+      resource: c3
+      passed: [or3]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: out4
+    params:
+      file: out/bit
+
+- name: and4a
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: in4x
+      passed: [setx]
+    - get: in2
+      trigger: true
+      resource: in4y
+      passed: [sety]
+    - get: animated-computing-machine
+  - task: and
+    file: animated-computing-machine/gates/and.yml
+  - put: out
+    resource: c4
+    params:
+      file: out/bit
+
+- name: and4b
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: out4
+      passed: [xor4a]
+    - get: in2
+      trigger: true
+      resource: c3
+      passed: [or3]
+    - get: animated-computing-machine
+  - task: and
+    file: animated-computing-machine/gates/and.yml
+  - put: out
+    resource: c4
+    params:
+      file: out/bit
+
+- name: or4
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: c4
+      passed: [and4a]
+    - get: in2
+      trigger: true
+      resource: c4
+      passed: [and4b]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: c4
+    params:
+      file: out/bit
+
 # final print
 
 - name: print
   plan:
   - aggregate:
     - get: in1
-      resource: c3
+      resource: c4
       trigger: true
-      passed: [or3]
+      passed: [or4]
     - get: in2
+      resource: out4
+      trigger: true
+      passed: [xor4b]
+    - get: in3
       resource: out3
       trigger: true
       passed: [xor3b]
-    - get: in3
+    - get: in4
       resource: out2
       trigger: true
       passed: [xor2b]
-    - get: in4
+    - get: in5
       resource: out1
       trigger: true
       passed: [xor1]
@@ -474,10 +575,11 @@ jobs:
       - name: in2
       - name: in3
       - name: in4
+      - name: in5
       run:
         path: sh
         args:
         - -exc
         - |
-          echo "$(cat in1/bit)$(cat in2/bit)$(cat in3/bit)$(cat in4/bit)"
+          echo "$(cat in1/bit)$(cat in2/bit)$(cat in3/bit)$(cat in4/bit)$(cat in5/bit)"
 
