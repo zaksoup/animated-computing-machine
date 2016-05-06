@@ -1,0 +1,22 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: alpine
+
+inputs:
+- name: animated-computing-machine
+
+outputs:
+- name: out1
+- name: out2
+
+params:
+  out1:
+  out2:
+
+
+run:
+  path: set.sh
