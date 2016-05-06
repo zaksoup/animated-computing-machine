@@ -29,7 +29,7 @@ jobs:
   plan:
   - get: animated-computing-machine
   - task: set
-    file: set.yml
+    file: animated-computing-machine/set.yml
     params:
       out1: 1
       out2: 0
@@ -47,10 +47,12 @@ jobs:
   plan:
   - aggregate:
     - get: in1
+      trigger: true
       resource: in1
       passed: [set]
     - get: in2
-      resource: in1
+      trigger: true
+      resource: in2
       passed: [set]
     - get: animated-computing-machine
   - task: and

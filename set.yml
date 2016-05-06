@@ -19,4 +19,4 @@ params:
 
 
 run:
-  path: set.sh
+  path: animated-computing-machine/set.sh
