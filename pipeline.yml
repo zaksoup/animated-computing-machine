@@ -6,20 +6,38 @@ resources:
     uri: https://github.com/zaksoup/animated-computing-machine.git
     branch: master
 
-- name: in1
+- name: in1x
   type: s3
   source:
     bucket: animated-computing-machine
-    versioned_file: in1/bit
+    versioned_file: in1x/bit
     access_key_id: {{access-key-id}}
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
 
-- name: in2
+- name: in2x
   type: s3
   source:
     bucket: animated-computing-machine
-    versioned_file: in2/bit
+    versioned_file: in2x/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: in1y
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: in1y/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+- name: in2y
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: in2y/bit
     access_key_id: {{access-key-id}}
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
@@ -33,6 +51,16 @@ resources:
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
 
+- name: out2
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: out2/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
+
 - name: c1
   type: s3
   source:
@@ -42,36 +70,65 @@ resources:
     secret_access_key: {{secret-access-key}}
     region_name: us-west-2
 
+- name: c2
+  type: s3
+  source:
+    bucket: animated-computing-machine
+    versioned_file: c2/bit
+    access_key_id: {{access-key-id}}
+    secret_access_key: {{secret-access-key}}
+    region_name: us-west-2
+
 jobs:
-- name: set
+- name: setx
   plan:
   - get: animated-computing-machine
   - task: set
     file: animated-computing-machine/set.yml
     params:
       out1: 1
-      out2: 1
+      out2: 0
   - aggregate:
     - put: in1
-      resource: in1
+      resource: in1x
       params:
         file: out1/bit
     - put: in2
-      resource: in2
+      resource: in2x
       params:
         file: out2/bit
 
-- name: xor
+- name: sety
+  plan:
+  - get: animated-computing-machine
+  - task: set
+    file: animated-computing-machine/set.yml
+    params:
+      out1: 1
+      out2: 0
+  - aggregate:
+    - put: in1
+      resource: in1y
+      params:
+        file: out1/bit
+    - put: in2
+      resource: in2y
+      params:
+        file: out2/bit
+
+#add bit 1
+
+- name: xor1
   plan:
   - aggregate:
     - get: in1
       trigger: true
-      resource: in1
-      passed: [set]
+      resource: in1x
+      passed: [setx]
     - get: in2
       trigger: true
-      resource: in2
-      passed: [set]
+      resource: in1y
+      passed: [sety]
     - get: animated-computing-machine
   - task: xor
     file: animated-computing-machine/gates/xor.yml
@@ -80,17 +137,17 @@ jobs:
     params:
       file: out/bit
 
-- name: and
+- name: and1
   plan:
   - aggregate:
     - get: in1
       trigger: true
-      resource: in1
-      passed: [set]
+      resource: in1x
+      passed: [setx]
     - get: in2
       trigger: true
-      resource: in2
-      passed: [set]
+      resource: in1y
+      passed: [sety]
     - get: animated-computing-machine
   - task: and
     file: animated-computing-machine/gates/and.yml
@@ -99,24 +156,135 @@ jobs:
     params:
       file: out/bit
 
+#add bit 2
+
+- name: xor2a
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: in2x
+      passed: [setx]
+    - get: in2
+      trigger: true
+      resource: in2y
+      passed: [sety]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: out2
+    params:
+      file: out/bit
+
+- name: xor2b
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: out2
+      passed: [xor2a]
+    - get: in2
+      trigger: true
+      resource: c1
+      passed: [and1]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: out2
+    params:
+      file: out/bit
+
+- name: and2a
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: in2x
+      passed: [setx]
+    - get: in2
+      trigger: true
+      resource: in2y
+      passed: [sety]
+    - get: animated-computing-machine
+  - task: and
+    file: animated-computing-machine/gates/and.yml
+  - put: out
+    resource: c2
+    params:
+      file: out/bit
+
+- name: and2b
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: out2
+      passed: [xor2a]
+    - get: in2
+      trigger: true
+      resource: c1
+      passed: [and1]
+    - get: animated-computing-machine
+  - task: and
+    file: animated-computing-machine/gates/and.yml
+  - put: out
+    resource: c2
+    params:
+      file: out/bit
+
+- name: or2
+  plan:
+  - aggregate:
+    - get: in1
+      trigger: true
+      resource: c2
+      passed: [and2a]
+    - get: in2
+      trigger: true
+      resource: c2
+      passed: [and2b]
+    - get: animated-computing-machine
+  - task: xor
+    file: animated-computing-machine/gates/xor.yml
+  - put: out
+    resource: c2
+    params:
+      file: out/bit
+
+# final print
+
 - name: print
   plan:
   - aggregate:
     - get: in1
+      resource: c2
+      trigger: true
+      passed: [or2]
+    - get: in2
+      resource: out2
+      trigger: true
+      passed: [xor2b]
+    - get: in3
       resource: out1
       trigger: true
-      passed: [xor]
-    - get: in2
-      resource: c1
-      trigger: true
-      passed: [and]
+      passed: [xor1]
   - task: print
     config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      inputs:
+      - name: in1
+      - name: in2
+      - name: in3
       run:
         path: sh
         args:
         - -exc
         - |
-          cat -n in1/bit
-          cat -n in2/bit
+          echo "$(cat in1/bit)$(cat in2/bit)$(cat in3/bit)"
 
