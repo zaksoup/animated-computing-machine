@@ -1,0 +1,13 @@
+---
+
+print:
+  - xor:
+    - and: [in1y, in1x]
+    - xor: [in2y, in2x]
+  - or:
+    - and:
+      - and: [in1y, in1x]
+      - xor: [in2y, in2x]
+    - and: [in2y, in2x]
+  - xor: [in1y, in1x]
+
