@@ -2,101 +2,186 @@
 
 require 'yaml'
 
-# logic = YAML.load(IO.read(ARGV[0]))
+class Pipeline
+  attr_accessor :jobs, :resources
 
-# puts logic
+  def initialize
+    @jobs = []
+    @resources = []
+  end
 
-# arg1 = logic['print'][0]
-# arg2 = logic['print'][1]
-# arg3 = logic['print'][2]
+  def add_job(job)
+    @jobs << job unless have_job(job['name'])
+  end
 
-# def print_ans(bit1, bit2, bit3)
+  def add_resource(res)
+    @resources << res unless have_res(res['name'])
+  end
 
-# end
+  def to_yaml
+    {
+      'jobs' => @jobs,
+      'resources' => @resources
+    }.to_yaml
+  end
 
-# print_ans(eval_logic(arg1), eval_logic(arg2), eval_logic(arg3))
+private
 
-all_jobs = []
+  def have_job(job_name)
+    @jobs.find{|job| job['name'] == job_name}
+  end
 
-# - xor: [in2y, in2x]
-def eval_xor(gate)
+  def have_res(res_name)
+    @resources.find{|res| res['name'] == res_name}
+  end
+end
 
-  arg0 = gate[:xor][0]
-  arg1 = gate[:xor][1]
-
-  arg0_name = eval_set(arg0)
-  arg1_name = eval_set(arg1)
-
-  name = ['xor_', arg0_name, arg1_name].join
-  res_name = name + '_res_out'
-
-  build = {
-    name: name,
-    plan: [
-      {
-        aggregate: [],
-      },
-      {
-        task: 'xor',
-        file: 'animated-computing-machine/gates/xor.yml',
-      },
-      {
-        put: 'out',
-        resource: res_name,
-        params: {file: 'out/bit'},
-      }
-    ]
+def make_gate_job(gate_type, name, arg0_name, arg1_name, res_name)
+  {
+    'name' =>  name,
+    'plan' =>  [{
+      'aggregate' =>  [{
+        'get' =>  'in1',
+        'trigger' =>  true,
+        'resource' =>  arg0_name
+      }, {
+        'get' =>  'in2',
+        'trigger' =>  true,
+        'resource' =>  arg1_name
+      }],
+    }, {
+      'task' =>  'and',
+      'file' =>  "animated-computing-machine/gates/#{gate_type}.yml",
+    }, {
+      'put' =>  'out',
+      'resource' =>  res_name,
+      'params' =>  {'file' =>  'out/bit'},
+    }]
   }
+end
+
+$pipeline = Pipeline.new
+
+def eval_gate(gate_type, gate)
+  arg0_name = eval_logic(gate[gate_type][0])
+  arg1_name = eval_logic(gate[gate_type][1])
+
+  name = [gate_type, '_', arg0_name, '_', arg1_name].join
+  res_name = name + '_res'
+
+  $pipeline.add_job make_gate_job(gate_type, name, arg0_name, arg1_name, res_name)
 
   res_name
 end
 
-# def rand_id
+def eval_print(arg0_name, arg1_name, arg2_name)
 
-# end
+  $pipeline.add_job({
+    'name' =>  'print',
+    'plan' =>  [{
+      'aggregate' =>  [{
+        'get' =>  'in1',
+        'trigger' =>  true,
+        'resource' =>  arg0_name
+      }, {
+        'get' =>  'in2',
+        'trigger' =>  true,
+        'resource' =>  arg1_name
+      }, {
+        'get' =>  'in3',
+        'trigger' =>  true,
+        'resource' =>  arg2_name
+      }],
+    }, {
+      'task' =>  'print',
+      'config' =>  {
+        'platform' =>  'linux',
+        'image_resource' =>  {
+          'type' =>  'docker-image',
+          'source' =>  {'repository' =>  'alpine'}
+        },
+        'inputs' =>  [
+          {'name' =>  'in1'},
+          {'name' =>  'in2'},
+          {'name' =>  'in3'},
+        ],
+        'run' =>  {
+          'path' =>  'sh',
+          'args' =>  ['-exc', 'echo "$(cat in1/bit)$(cat in2/bit)$(cat in3/bit)"']
+        }
+      }
+    }]
+  })
 
-# def write_jobs_recursive(job)
-
-# end
-
-Job = Struct.new :output_resource_name, :definition
-
-# set_in1x = Struct.new 'in1x', {}
-# set_in1y = Struct.new 'in1y', {}
-
-# root = eval_or({'xor': [set_in1x, set_in1y])
+  nil
+end
 
 def eval_set(set_def)
 
-  arg0 = gate[:xor][0]
-  arg1 = gate[:xor][1]
+  val = set_def['val']
+  name = 'in_' + set_def['in']
+  res_name = name + '_res'
 
-  res_name = 'in_' + set_def[:in]
+  $pipeline.add_resource({
+    'name' =>  name,
+    'type' =>  's3',
+    'source' =>  {
+      'bucket' =>  'animated-computing-machine',
+      'versioned_file' =>  name + '/bit',
+      'access_key_id' =>  '{{access-key-id}}',
+      'secret_access_key' =>  '{{secret-access-key}}',
+      'region_name' =>  'us-west-2'
+    }
+  })
 
-  build = {
-    name: 'xor1' + rand_id,
-    plan: [
-      {
-        aggregate: [],
-      },
-      {
-        task: 'xor',
-        file: 'animated-computing-machine/gates/xor.yml',
-      },
-      {
-        put: 'out',
-        resource: res_name,
-        params: {file: 'out/bit'},
-      }
-    ]
-  }
+  $pipeline.add_job({
+    'name' =>  'set_' + name,
+    'plan' =>  [{
+      'get' =>  'animated-computing-machine',
+    }, {
+      'task' =>  'set',
+      'file' =>  'animated-computing-machine/set_bit.yml',
+      'params' =>  [val]
+    }, {
+      'put' =>  res_name,
+      'params' =>  {'file' =>  'out1/bit'}
+    }]
+  })
 
-  #Job.new res_name, build
   res_name
 end
 
-puts eval_set({in: '1x', val: '0'})
-puts eval_xor({xor: [{in: '1x', val: '0'}, {in: '1y', val: '0'}]})
-puts all_jobs.inspect
+def eval_logic(node)
+  if node['xor']
+    eval_gate('xor', node)
+  elsif node['or']
+    eval_gate('or', node)
+  elsif node['and']
+    eval_gate('and', node)
+  elsif node['in']
+    eval_set(node)
+  else
+    puts 'wtf is this? ' + node.inspect
+    exit(1)
+  end
+end
 
+class PipelineEngineer
+
+  def initialize(logic)
+    arg1 = logic['print'][0]
+    arg2 = logic['print'][1]
+    arg3 = logic['print'][2]
+
+    eval_print(
+      eval_logic(arg1),
+      eval_logic(arg2),
+      eval_logic(arg3)
+    )
+  end
+
+end
+
+logic = YAML.load(IO.read(ARGV[0]))
+puts PipelineEngineer.new(logic).make_pipeline.to_yaml
 

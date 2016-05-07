@@ -1,13 +1,24 @@
 ---
-
 print:
   - xor:
-    - and: [in1y, in1x]
-    - xor: [in2y, in2x]
+    - and:
+      - {in: in1y, val: 0}
+      - {in: inlx, val: 1}
+    - xor:
+      - {in: in2y, val: 1}
+      - {in: in2x, val: 1}
   - or:
     - and:
-      - and: [in1y, in1x]
-      - xor: [in2y, in2x]
-    - and: [in2y, in2x]
-  - xor: [in1y, in1x]
+      - and:
+        - {in: in1y, val: 0}
+        - {in: inlx, val: 1}
+      - xor:
+        - {in: in2y, val: 1}
+        - {in: in2x, val: 1}
+    - and:
+      - {in: in2y, val: 1}
+      - {in: in2x, val: 1}
+  - xor:
+    - {in: in1y, val: 0}
+    - {in: inlx, val: 1}
 
