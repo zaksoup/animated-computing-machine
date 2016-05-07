@@ -1,0 +1,31 @@
+---
+inputs:
+- &X0 {in: x0, val: 0}
+- &X1 {in: x1, val: 0}
+- &Y0 {in: y0, val: 0}
+- &Y1 {in: y1, val: 0}
+print:
+  - or:
+    - xor:
+      - and: [*Y0, *Y1]
+      - xor: [*Y1, *X1]
+    - and:
+      - xor:
+        - and:
+          - or: [*Y0, *X0]
+          - *X0
+        - xor: [*Y1, *X1]
+      - xor:
+        - and:
+          - or: [*Y0, *X0]
+          - *X0
+        - xor: [*Y1, *X1]
+  - or:
+    - and:
+      - and: [*Y0, *X0]
+      - xor:
+        - *Y1
+        - xor: [*Y1, *X1]
+    - and: [*Y1, *X1]
+  - xor: [*Y0, *X0]
+
