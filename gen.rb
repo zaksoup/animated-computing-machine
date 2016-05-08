@@ -23,7 +23,7 @@ class Pipeline
     {
       'jobs' => @jobs,
       'resources' => @resources
-    }.to_yaml
+    }.to_yaml.gsub("'{{access-key-id}}'", '{{access-key-id}}').gsub("'{{secret-access-key}}'", '{{secret-access-key}}')
   end
 
 private
@@ -50,14 +50,6 @@ class PipelineEngineer
 
 private
 
-  def access_key_id
-    'AKIA_secret_key'
-  end
-
-  def secret_access_key
-    'secret_access_key'
-  end
-
   def make_s3_resource(name)
     md5 = Digest::MD5.new
     md5.update name
@@ -67,8 +59,8 @@ private
       'source' => {
         'bucket' => 'animated-computing-machine-tom',
         'versioned_file' => "res#{md5.hexdigest}/bit",
-        'access_key_id' => access_key_id,
-        'secret_access_key' => secret_access_key,
+        'access_key_id' => '{{access-key-id}}',
+        'secret_access_key' => '{{secret-access-key}}',
         'region_name' => 'us-west-2'
       }
     }
@@ -107,8 +99,8 @@ private
       'source' => {
         'bucket' => 'animated-computing-machine-tom',
         'versioned_file' => "trigger/value",
-        'access_key_id' => access_key_id,
-        'secret_access_key' => secret_access_key,
+        'access_key_id' => '{{access-key-id}}',
+        'secret_access_key' => '{{secret-access-key}}',
         'region_name' => 'us-west-2'
       }
     }
@@ -123,11 +115,13 @@ private
         }, {
           'get' => 'in1',
           'trigger' => true,
-          'resource' => arg0_name
+          'resource' => arg0_name,
+          'passed' => [arg0_name.chomp('_res')],
         }, {
           'get' => 'in2',
           'trigger' => true,
-          'resource' => arg1_name
+          'resource' => arg1_name,
+          'passed' => [arg1_name.chomp('_res')],
         }],
       }, {
         'task' => 'and',
@@ -166,7 +160,8 @@ private
       gets << {
         'get' => "in#{i}",
         'trigger' => true,
-        'resource' => arg_name
+        'resource' => arg_name,
+        'passed' => [arg_name.chomp('_res')]
       }
 
       inputs << {'name' => "in#{i}"}
@@ -217,7 +212,7 @@ private
     @pipeline.add_resource(make_s3_resource res_name)
 
     @pipeline.add_job({
-      'name' => 'set_' + name,
+      'name' => name,
       'plan' => [{
           'get' => 'trigger',
           'trigger' => true,
