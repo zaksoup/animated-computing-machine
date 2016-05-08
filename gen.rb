@@ -41,7 +41,6 @@ class PipelineEngineer
 
   def construct(logic)
     @pipeline = Pipeline.new
-    @pipeline.add_resource(make_git_resource)
     @pipeline.add_resource(make_manual_trigger_resource)
     @pipeline.add_job(make_manual_trigger_job)
     eval_logic(logic)
@@ -62,17 +61,6 @@ private
         'access_key_id' => '{{access-key-id}}',
         'secret_access_key' => '{{secret-access-key}}',
         'region_name' => 'us-west-2'
-      }
-    }
-  end
-
-  def make_git_resource
-    {
-      'name' => 'animated-computing-machine',
-      'type' => 'git',
-      'source' => {
-        'uri' => 'https://github.com/zaksoup/animated-computing-machine.git',
-        'branch' => 'master'
       }
     }
   end
@@ -107,12 +95,19 @@ private
   end
 
   def make_gate_job(gate_type, name, arg0_name, arg1_name, res_name)
+    gate_cmd = {
+      'or'  => 'test $(cat in1/bit) = 1 || test $(cat in2/bit) = 1 && echo 1 || echo 0 > out/bit',
+      'and' => 'test $(cat in1/bit) = 1 && test $(cat in2/bit) = 1 && echo 1 || echo 0 > out/bit',
+      'xor' => 'test $(cat in1/bit) != $(cat in2/bit) && echo 1 || echo 0 > out/bit'
+    }
+
+    inputs = [{'name' => 'in1'}, {'name' => 'in2'}]
+    outputs = [{'name' => 'out'}]
+
     {
       'name' => name,
       'plan' => [{
         'aggregate' => [{
-          'get' => 'animated-computing-machine',
-        }, {
           'get' => 'in1',
           'trigger' => true,
           'resource' => arg0_name,
@@ -123,10 +118,9 @@ private
           'resource' => arg1_name,
           'passed' => [arg1_name.chomp('_res')],
         }],
-      }, {
-        'task' => 'and',
-        'file' => "animated-computing-machine/gates/#{gate_type}.yml",
-      }, {
+      },
+      make_sh_task(gate_type, inputs, gate_cmd[gate_type], outputs),
+      {
         'put' => 'out',
         'resource' => res_name,
         'params' => {'file' => 'out/bit'},
